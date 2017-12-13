@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>苏州天气</title>
+    <!-- 引入 echarts.js -->
+    <script src="echarts.min.js"></script>
+</head>
+<body>
+    <!-- 为 ECharts 准备一个具备大小（宽高）的 Dom -->
+    <div id="main" style="width:600px; height:400px;"></div>
+    <script>
+        // 基于准备好的 dom，初始化 echarts 实例
+        var element = document.querySelector('#main')
+        var myChart = echarts.init(element)
+
+        // 指定图表的配置项和数据
+        var option = {
+            title: {
+                text: '苏州三天天气',
+            },
+            tooltip: {
+                trigger: 'axis'
+            },
+            legend: {
+                data:['最高气温','最低气温']
+            },
+            toolbox: {
+                show: true,
+                feature: {
+                    dataZoom: {
+                        yAxisIndex: 'none'
+                    },
+                    dataView: {readOnly: false},
+                    magicType: {type: ['line', 'bar']},
+                    restore: {},
+                    saveAsImage: {}
+                }
+            },
+            xAxis:  {
+                type: 'category',
+                boundaryGap: false,
+                data: []
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: {
+                    formatter: '{value} °C'
+                }
+            },
+            series: [
+                {
+                    name:'最高气温',
+                    type:'line',
+                    data:[],
+                    markPoint: {
+                        data: [
+                            {type: 'max', name: '最大值'},
+                            {type: 'min', name: '最小值'}
+                        ]
+                    },
+                    markLine: {
+                        data: [
+                            {type: 'average', name: '平均值'}
+                        ]
+                    }
+                },
+                {
+                    name:'最低气温',
+                    type:'line',
+                    data:[],
+                    markPoint: {
+                        data: [
+                            {name: '周最低', value: 4, xAxis: 0, yAxis: 4}
+                        ]
+                    },
+                    markLine: {
+                        data: [
+                            {type: 'average', name: '平均值'},
+                            [{
+                                symbol: 'none',
+                                x: '90%',
+                                yAxis: 'max'
+                            }, {
+                                symbol: 'circle',
+                                label: {
+                                    normal: {
+                                        position: 'start',
+                                        formatter: '最大值'
+                                    }
+                                },
+                                type: 'max',
+                                name: '最高点'
+                            }]
+                        ]
+                    }
+                }
+            ]
+        };
+
+        // 使用刚指定的配置项和数据显示图表。
+        // myChart.setOption(option)
+
+        var ajax = function(request) {
+            /*
+            request 是一个 object，有如下属性
+                method，请求的方法，string
+                url，请求的路径，string
+                data，请求发送的数据，如果是 GET 方法则没有这个值，string
+                callback，响应回调，function
+            */
+            var r = new XMLHttpRequest()
+            r.open(request.method, request.url, true)
+            // 注意, 这是一个 ajax 的套路, 可以避免在获取 和风天气 api 的时候报错
+            if (request.contentType != undefined) {
+                r.setRequestHeader('Content-Type', request.contentType)
+            }
+            r.onreadystatechange = function() {
+                if (r.readyState == 4) {
+                    request.callback(r.response)
+                }
+            }
+            if (request.method == 'GET') {
+                r.send()
+            } else {
+                r.send(request.data)
+            }
+        }
+
+
+        var fetchWeather = function() {
+            var url = 'https://free-api.heweather.com/v5/forecast?city=苏州&key=6b78de6f4df1497fa6c77aa2355480ab'
+            var request = {
+                url: url,
+                method: 'GET',
+                callback: function(r) {
+                    var data = JSON.parse(r)
+                    var date = []
+                    var maxTem = []
+                    var minTem = []
+                    var daily_forecast = data.HeWeather5[0]['daily_forecast']
+                    for (var i = 0; i < daily_forecast.length; i++) {
+                        date.push(daily_forecast[i]['date'])
+                        maxTem.push(daily_forecast[i]['tmp']['max'])
+                        minTem.push(daily_forecast[i]['tmp']['min'])
+                    }
+                    option['xAxis']['data'] = date
+                    option['series'][0]['data'] = maxTem
+                    option['series'][1]['data'] = minTem
+                    myChart.setOption(option)
+                }
+            }
+            ajax(request)
+        }
+
+        fetchWeather()
+
+    </script>
+</body>
+</html>
